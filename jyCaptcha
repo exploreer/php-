@@ -1,0 +1,84 @@
+ 详见博客  https://blog.csdn.net/bianb123/article/details/81033730 
+ 
+  ----------------------------------------html页面-------------------------------------
+//HTML页面内容及js
+    <p>
+        <label for="username2">用户名：</label>
+        <input class="inp" id="username2" type="text" value="极验验证">
+    </p><br>
+    <p>
+        <label for="password2">密&nbsp;&nbsp;&nbsp;&nbsp;码：</label>
+        <input class="inp" id="password2" type="password" value="123456">
+    </p><br>
+    <div id="embed-captcha"></div>
+    <p id="wait" class="show">正在加载验证码......</p>
+    <p id="notice" class="hide">请先完成验证</p>
+    <input class="btn" id="embed-submit" type="submit" value="提交">
+ 
+ //记得引入SDK中封装好的js
+ <script src="gt.js"></script>
+ 
+ 
+ 
+ ---------------------------------------------html页面js部分-------------------------------------
+ $(function () {  
+    $.ajax({
+			url: "__CONTROLLER__/getJyImg?t=" + (new Date()).getTime(), // 加随机数防止缓存
+			type: "get",
+			dataType: "json",
+			success: function (data) {
+				initGeetest({
+					gt: data.gt,
+					challenge: data.challenge,
+					new_captcha: data.new_captcha,
+					product: "embed", // 产品形式，包括：float，embed，popup。注意只对PC版验证码有效
+					offline: !data.success // 表示用户后台检测极验服务器是否宕机，一般不需要关注
+				}, handler);
+			}
+	});
+		
+	//后台验证Key ID通过后，前台生成验证码
+	var handler = function (captchaObj) {
+			$("#embed-submit").click(function (e) {
+				var validate = captchaObj.getValidate();
+				//当没有验证或者验证出错时，会阻止用户click事件提交数据，e.preventDefault()
+				if (!validate) {
+					$("#notice")[0].className = "show";
+					setTimeout(function () {
+						$("#notice")[0].className = "hide";
+					}, 2000);
+					e.preventDefault();
+				}
+			});
+			// 将验证码加到id为captcha的元素里，同时会有三个input的值：geetest_challenge, geetest_validate, geetest_seccode
+			captchaObj.appendTo("#embed-captcha");
+			captchaObj.onReady(function () {
+				$("#wait")[0].className = "hide";
+			});
+		};
+ });
+  
+  
+  ----------------------------------------PHP后台代码开始-------------------------------------
+  
+  //后台验证配置的key 和 id 通过后，前台显示验证码
+  public function getJyImg(){
+		import('Vendor.GeetestLib.Geetest');
+		$id = '48a6ebac4ebc6642d68c217fca33eb4d';
+		$key = '4f1c085290bec5afdc54df73535fc361';
+		
+		$gtObj = new \Geetest($id,$key);
+		$data = array(
+			"user_id" => "test", 
+			"client_type" => "web", 
+			"ip_address" => "127.0.0.1" 
+		);
+		$status = $gtObj->pre_process($data, 1);
+		$_SESSION['gtserver'] = $status;
+		$_SESSION['user_id'] = $data['user_id'];
+		
+		echo $gtObj->get_response_str();				
+	}
+  
+
+  
